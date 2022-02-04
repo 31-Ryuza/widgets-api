@@ -6,6 +6,7 @@ const router = express.Router();
 
 /* GET users */
 router.get('/', async (req, res, next) => {
+  console.log(`your cookie: ${JSON.stringify(req.cookies)}`)
   res.json(await user.index());
 });
 
