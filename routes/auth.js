@@ -3,7 +3,6 @@ const router = express.Router();
 const bcrypt = require('bcrypt');
 var jwt = require('jsonwebtoken');
 const auth = require('../services/auth');
-require('dotenv').config();
 
 router.post('/logout', (req, res, next) => {
   res.clearCookie('_token');
