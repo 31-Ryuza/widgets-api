@@ -3,12 +3,12 @@ const user = require('../../services/app/users');
 const bcrypt = require('bcrypt');
 const router = express.Router();
 
-/* GET users */
+/* GET users index */
 router.get('/', async (req, res, next) => {
   res.json(await user.index());
 });
 
-/* POST users */
+/* POST users store */
 router.post('/', async (req, res, next) => {
   const saltRounds = 10;
   const { identifier, password, name, email, is_active } = req.body;
@@ -30,6 +30,11 @@ router.post('/', async (req, res, next) => {
       res.sendStatus(500);
     }
   });
+});
+
+/* GET users show */
+router.get('/show', async (req, res, next) => {
+  res.json(await user.show(req.userId))
 });
 
 /* Get users datatable */

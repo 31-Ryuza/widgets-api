@@ -11,11 +11,22 @@ var authRouter = require('./routes/auth');
 
 var app = express();
 
-var corsOption = {
+const jwt = require('jsonwebtoken');
+const corsOption = {
   origin: 'http://localhost:3000',
   optionsSuccessStatus: 200,
   credentials: true,
 };
+
+// check _token
+const authMiddleware = (req, res, next) => {
+  if (!req.cookies._token) return res.sendStatus(401);
+  jwt.verify(req.cookies._token, process.env.JWT_SECRET, (err, decoded) => {
+    if (err) return res.sendStatus(403);
+    req.userId = decoded.id;
+    next();
+  })
+}
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -28,7 +39,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/', indexRouter);
-app.use('/users', usersRouter);
+app.use('/users', authMiddleware, usersRouter);
 app.use('/auth', authRouter);
 
 // catch 404 and forward to error handler

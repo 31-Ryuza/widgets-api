@@ -5,6 +5,8 @@ const index = async () => {
   return await pool.query(`SELECT ${fields} FROM users WHERE deleted_at IS NULL`);
 }
 
+const show = async (id) => (await pool.query(`SELECT ${fields} FROM users WHERE deleted_at IS NULL AND id = ?`, [id]))[0];
+
 const store = async (payload) => {
   return await pool.query('INSERT INTO users SET ?', payload);
 };
@@ -21,6 +23,7 @@ const totalData = async () => (await pool.query(`SELECT COUNT(*) AS total_data F
 module.exports = {
   index,
   store,
+  show,
   datatable,
   totalData,
 }
