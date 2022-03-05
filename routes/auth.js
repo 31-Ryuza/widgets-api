@@ -4,9 +4,55 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const auth = require('../services/auth');
 
+const tokenAge = 60 * 1;
+const tokenMaxAge = 1000 * tokenAge;
+const tokenSign = (user) => ({
+  // iat: 'value setted by default libs',
+  exp: Math.floor(Date.now() / 1000) + tokenAge,
+  nbf: Math.floor(Date.now() / 1000),
+  id: user?.id,
+  app_id: user?.app_id,
+  // iss: '',
+  // aud: '',
+});
+
+const tokenResetAge = 60 * 2;
+const tokenResetMaxAge = 1000 * tokenResetAge;
+const tokenResetSign = (user, token) => ({
+  // iat: 'value setted by default libs',
+  exp: Math.floor(Date.now() / 1000) + tokenResetAge,
+  nbf: Math.floor(Date.now() / 1000),
+  id: user?.id,
+  app_id: user?.app_id,
+  token,
+  // iss: '',
+  // aud: '',
+});
+
 router.post('/logout', (req, res, next) => {
-  res.clearCookie('_token');
-  res.sendStatus(200);
+  res.clearCookie('_token').clearCookie('_token_reset').sendStatus(200);
+})
+
+router.post('/reset', (req, res, next) => {
+  if (!req.cookies._token_reset) return res.sendStatus(403);
+  jwt.verify(req.cookies._token_reset, process.env.JWT_SECRET_RESET, (err, decoded) => {
+    if (err) { 
+      return res.clearCookie('_token').clearCookie('_token_reset').sendStatus(403); 
+    }
+    const user = { id: decoded.id, app_id: decoded.app_id };
+    const token = jwt.sign(tokenSign(user), process.env.JWT_SECRET);
+    const tokenReset = jwt.sign(tokenResetSign(user, token), process.env.JWT_SECRET_RESET);
+    
+    res.cookie('_token', token, {
+      maxAge: tokenMaxAge,
+      httpOnly: true,
+    }).cookie('_token_reset', tokenReset, {
+      maxAge: tokenResetMaxAge,
+      httpOnly: true,
+    })
+    .sendStatus(200);
+
+  })
 })
 
 router.post('/login', async (req, res, next) => {
@@ -18,27 +64,23 @@ router.post('/login', async (req, res, next) => {
   } catch (error) {
     return res.sendStatus(500);
   }
-
+  
   if(!await bcrypt.compare(req.body.password, user.password)) return res.status(403).json('Cred fail');
-
-  const token = jwt.sign(
-    {
-      // iat: 'value setted by default libs',
-      exp: Math.floor(Date.now() / 1000) + 60 * 10,
-      nbf: Math.floor(Date.now() / 1000),
-      id: user.id,
-      // iss: '',
-      // aud: '',
-    },
-    process.env.JWT_SECRET
-  );
-
+  
+  
   delete user.password;
+  const token = jwt.sign(tokenSign(user), process.env.JWT_SECRET);
+  const tokenReset = jwt.sign(tokenResetSign(user, token), process.env.JWT_SECRET_RESET);
+
 
   res.cookie('_token', token, {
-    maxAge: 1000 * 60 * 12,
+    maxAge: tokenMaxAge,
     httpOnly: true,
-  }).json(user);
+  }).cookie('_token_reset', tokenReset, {
+    maxAge: tokenResetMaxAge,
+    httpOnly: true,
+  })
+  .json(user);
 
 });
 
