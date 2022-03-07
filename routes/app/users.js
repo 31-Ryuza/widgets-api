@@ -16,14 +16,13 @@ router.get('/show', async (req, res, next) => {
 /* POST users store */
 router.post('/', async (req, res, next) => {
   const saltRounds = 10;
-  const { identifier, password, name, email, is_active, app_id } = req.body;  
+  const { identifier, password, name, email, is_active } = req.body;  
   bcrypt.hash(password, saltRounds, async (err, hash) => {
     if (err) res.sendStatus(500);
     const payload = {
       identifier,
       name,
       email,
-      app_id,
       password: hash,
       is_active: is_active || 1,
     };
@@ -40,7 +39,7 @@ router.post('/', async (req, res, next) => {
 /* Get users datatable */
 router.get('/datatable', async (req, res, next) => {
   try {
-    const data = await user.datatable({...req.query, appId: req.appId});  
+    const data = await user.datatable({...req.query, appId: req.appId, filter: req.filter});  
     res.json({
       widget_title: 'List Users',
       widget_data: {
@@ -53,7 +52,7 @@ router.get('/datatable', async (req, res, next) => {
         },
         t_body: data,
         order_col: ['id', 'identifier', 'name', 'email', 'is_active'],
-        total_data: (await user.totalData(req.appId)).total_data,
+        total_data: (await user.totalData(req.appId, req.filter)).total_data,
         base_endpoint: `${process.env.BASE_URL}/users/datatable`,
       }
     })

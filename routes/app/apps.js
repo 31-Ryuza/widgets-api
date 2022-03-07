@@ -4,7 +4,7 @@ const router = express.Router();
 
 /* GET apps index */
 router.get('/', async (req, res, next) => {
-  res.json(await app.index());
+  res.json(await app.index(req.userId));
 });
 
 /* POST apps store */
@@ -22,7 +22,7 @@ router.get('/show', async (req, res, next) => {
 /* Get apps datatable */
 router.get('/datatable', async (req, res, next) => {
   const payload = {limit, offset, order} = req.query
-  const data = await app.datatable(payload);
+  const data = await app.datatable({...payload, id: req.userId, filter: req.filter});
   res.json({
     widget_title: 'List Apps',
     widget_data: {
@@ -34,9 +34,10 @@ router.get('/datatable', async (req, res, next) => {
       },
       t_body: data,
       order_col: ['id', 'name', 'logo', 'type'],
-      total_data: (await app.totalData()).total_data,
+      total_data: (await app.totalData(req.userId, req.filter)).total_data,
       base_endpoint: `${process.env.BASE_URL}/apps/datatable`,
     }
   })
 })
+
 module.exports = router;

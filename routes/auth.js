@@ -3,8 +3,9 @@ const router = express.Router();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const auth = require('../services/auth');
+const apps = require('../services/app/apps');
 
-const tokenAge = 60 * 1;
+const tokenAge = 60 * 10;
 const tokenMaxAge = 1000 * tokenAge;
 const tokenSign = (user) => ({
   // iat: 'value setted by default libs',
@@ -16,7 +17,7 @@ const tokenSign = (user) => ({
   // aud: '',
 });
 
-const tokenResetAge = 60 * 2;
+const tokenResetAge = 60 * 20;
 const tokenResetMaxAge = 1000 * tokenResetAge;
 const tokenResetSign = (user, token) => ({
   // iat: 'value setted by default libs',
@@ -30,14 +31,14 @@ const tokenResetSign = (user, token) => ({
 });
 
 router.post('/logout', (req, res, next) => {
-  res.clearCookie('_token').clearCookie('_token_reset').sendStatus(200);
+  res.clearCookie('_token').clearCookie('_token_reset').clearCookie('_filter').sendStatus(200);
 })
 
 router.post('/reset', (req, res, next) => {
   if (!req.cookies._token_reset) return res.sendStatus(403);
   jwt.verify(req.cookies._token_reset, process.env.JWT_SECRET_RESET, (err, decoded) => {
     if (err) { 
-      return res.clearCookie('_token').clearCookie('_token_reset').sendStatus(403); 
+      return res.clearCookie('_token').clearCookie('_token_reset').clearCookie('_filter').sendStatus(403); 
     }
     const user = { id: decoded.id, app_id: decoded.app_id };
     const token = jwt.sign(tokenSign(user), process.env.JWT_SECRET);
@@ -66,9 +67,9 @@ router.post('/login', async (req, res, next) => {
   }
   
   if(!await bcrypt.compare(req.body.password, user.password)) return res.status(403).json('Cred fail');
-  
-  
+  app_id = (await apps.index(user.id)).map((val) => val.id);
   delete user.password;
+  user = {...user, app_id};
   const token = jwt.sign(tokenSign(user), process.env.JWT_SECRET);
   const tokenReset = jwt.sign(tokenResetSign(user, token), process.env.JWT_SECRET_RESET);
 

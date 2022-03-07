@@ -6,9 +6,10 @@ var logger = require('morgan');
 var cors = require('cors');
 
 var indexRouter = require('./routes/index');
+var authRouter = require('./routes/auth');
+var filterRouter = require('./routes/filter');
 var appsRouter = require('./routes/app/apps');
 var usersRouter = require('./routes/app/users');
-var authRouter = require('./routes/auth');
 var testingRouter = require('./routes/testing');
 
 var app = express();
@@ -25,12 +26,18 @@ const authMiddleware = (req, res, next) => {
   if (!req.cookies._token) return res.sendStatus(401);
   jwt.verify(req.cookies._token, process.env.JWT_SECRET, (err, decoded) => {
     if (err) {
-      return res.clearCookie('_token').clearCookie('_token_reset').sendStatus(403);
+      return res.clearCookie('_token').clearCookie('_token_reset').clearCookie('_filter').sendStatus(403);
     }
     req.userId = decoded.id;
     req.appId = decoded.app_id;    
     next();
   })
+}
+
+// check_filter
+const checkFilterMiddleware = (req, res, next) => {  
+  req.filter = req.cookies._filter || 0;
+  next();
 }
 
 // view engine setup
@@ -44,9 +51,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/', indexRouter);
-app.use('/apps', authMiddleware, appsRouter);
-app.use('/users', authMiddleware, usersRouter);
 app.use('/auth', authRouter);
+app.use('/filter', authMiddleware, filterRouter);
+app.use('/apps', authMiddleware, checkFilterMiddleware, appsRouter);
+app.use('/users', authMiddleware, checkFilterMiddleware, usersRouter);
 app.use('/testing', testingRouter);
  
 // catch 404 and forward to error handler
